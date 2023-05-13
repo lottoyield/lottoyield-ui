@@ -3,18 +3,19 @@ const TREE_HEIGHT = 4
 const PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
 const LOTTOYIELD_ADDR = '0x5FbDB2315678afecb367f032d93F642f64180aa3'
 let LOTTOYIELD_ABI
-fetch('./abi.json')
+let lottoyield
+
+const rpc_url = 'http://127.0.0.1:8545/'
+const rpc = new ethers.JsonRpcProvider(rpc_url)
+const wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
+
+fetch('./static/abi.json')
     .then(res => res.json())
     .then(abi => {
         LOTTOYIELD_ABI = abi
+        lottoyield = new ethers.Contract(LOTTOYIELD_ADDR, LOTTOYIELD_ABI, wallet)
+        onLoad()
     })
-
-let rpc_url = 'http://127.0.0.1:8545/'
-let rpc = new ethers.JsonRpcProvider(rpc_url)
-let wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
-// console.log('address:', wallet.address)
-
-let lottoyield = new ethers.Contract(LOTTOYIELD_ADDR, LOTTOYIELD_ABI, wallet)
 
 let encoder = new ethers.AbiCoder()
 let addr = (a) => '0x' + (new ethers.AbiCoder()).encode(['uint160'], [a]).slice(26)
@@ -29,22 +30,22 @@ function makeItem(balance, shares, owner) {
     }
 }
 
-function makeEmptyItem(idx) {
+function makeEmptyItem() {
     return makeItem(0, 0, 0)
 }
 
 let items = new Array(1 << TREE_HEIGHT).fill(0).map(makeEmptyItem)
 async function updateItem(index, delta_amount) {
     delta_amount = BigInt(delta_amount)
-    console.log("updating index", index, "by", un18f2(delta_amount))
-    let tree = merklizeItems(items, TREE_HEIGHT)
-    let localRoot = BigInt(tree[TREE_HEIGHT][0])
-    let chainRoot = await lottoyield.$rootHash()
+    // console.log("updating index", index, "by", un18f2(delta_amount))
+    // let tree = merklizeItems(items, TREE_HEIGHT)
+    // let localRoot = BigInt(tree[TREE_HEIGHT][0])
+    // let chainRoot = await lottoyield.$rootHash()
     // if (localRoot != chainRoot) {
     //     throw new Error('root mismatch')
     // }
 
-    let new_amount = items[index].balance + delta_amount
+    // let new_amount = items[index].balance + delta_amount
     let token = (delta_amount > 0 ? 0 : 1) // eth if deposit, steth if withdraw
     if (items[index].owner == 0) {
         // SECURITY NOTE: the leaf here is not verified against the chain
@@ -59,17 +60,12 @@ async function updateItem(index, delta_amount) {
     // items[index].balance += delta_amount
     tree = merklizeItems(items, TREE_HEIGHT)
     let proof = getProof(tree, index)
-    let root = calcRoot(proof, tree[0][index] || ZERO_ELEMENT)
+    // let root = calcRoot(proof, tree[0][index] || ZERO_ELEMENT)
     let txn = await lottoyield.update.populateTransaction(index, [delta_amount, token], proof)
     if (delta_amount > 0)
         txn.value = delta_amount
     let resp = await wallet.sendTransaction(txn)
     let receipt = await rpc.waitForTransaction(resp.hash)
-    // console.log(receipt.logs.length)
-    // console.log(receipt.logs[0].topics[0])
-    // console.log(receipt.logs[0].topics[1])
-    // console.log(receipt.logs[0].topics[2])
-    // console.log(receipt.logs[0].data)
     updateStakes(receipt.logs)
 }
 
@@ -100,7 +96,7 @@ function onStakeUpdate(log) {
     let prev_balance = items[depositId].balance
     let delta_balance = balance - prev_balance
     items[depositId] = makeItem(balance, shares, owner)
-    console.log(`[${depositId}] ${owner} ${balance} ${shares}`)
+    // console.log(`[${depositId}] ${owner} ${balance} ${shares}`)
     uiAddStaker(items[depositId], delta_balance)
 }
 
@@ -119,7 +115,10 @@ async function loadStakes() {
     let logs = await lottoyield.queryFilter('StakeUpdate')
     updateStakes(logs)
 }
-loadStakes()
+
+async function onLoad() {
+    loadStakes()
+}
 
 // async function getUserSigner() {
 //   const provider = new ethers.providers.Web3Provider(window.ethereum);
