@@ -38,10 +38,10 @@
     
     <div class="widget">
         <h2>
-            <b>Rewards: </b><span>$123.45</span>
+            <b>Rewards: </b><span id="el_rewards">$123.45</span>
         </h2>
         <small>
-            <b>Total Value Locked: </b><span>$10,777,420.69</span>
+            <b>Total Value Locked: </b><span id="el_tvl">$10,777,420.69</span>
         </small>
     </div>
 
@@ -56,11 +56,11 @@
 
         <hr />
         
-        <input type="text" id="txt_usd_amount" value="$90,000" style="width: 120px; text-align: right; background-color: coral; border: 0px;" disabled />
+        <input type="text" id="txt_usd_amount" value="$9,255" style="width: 120px; text-align: right; background-color: coral; border: 0px;" disabled />
         <br />
 
-        <span>amount:</span>
-        <input type="text" id="txt_amount" value="50" style="width: 120px; text-align: right" />
+        <span>ETH amount:</span>
+        <input type="text" id="txt_amount" value="5" style="width: 120px; text-align: right" />
         <input type="button" value="Send" />
         <br />
         <small>
@@ -76,8 +76,9 @@
     <table id="el_stakers">
         <tr>
             <th>Address</th>
-            <th>Amount</th>
-            <th>Time</th>
+            <th>Change</th>
+            <th>Balance</th>
+            <th>Chances</th>
         </tr>
     </table>
 </main>

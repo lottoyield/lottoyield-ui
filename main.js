@@ -1,19 +1,22 @@
-
-const TREE_HEIGHT = 4
 const PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
-const LOTTOYIELD_ADDR = '0x5FbDB2315678afecb367f032d93F642f64180aa3'
-let LOTTOYIELD_ABI
-let lottoyield
 
-const rpc_url = 'http://127.0.0.1:8545/'
+let TREE_HEIGHT
+let conf
+let lottoyield
+let steth
+
+const rpc_url = 'https://97a3-147-235-197-42.ngrok-free.app' // 'http://127.0.0.1:8545/'
 const rpc = new ethers.JsonRpcProvider(rpc_url)
 const wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
 
-fetch('./static/abi.json')
+fetch('./static/conf.json')
     .then(res => res.json())
-    .then(abi => {
-        LOTTOYIELD_ABI = abi
-        lottoyield = new ethers.Contract(LOTTOYIELD_ADDR, LOTTOYIELD_ABI, wallet)
+    .then(async (json) => {
+        conf = json
+        steth = new ethers.Contract(conf.steth.address, conf.steth.abi, wallet)
+        lottoyield = new ethers.Contract(conf.lottoyield.address, conf.lottoyield.abi, wallet)
+        TREE_HEIGHT = await lottoyield.TREE_HEIGHT()
+
         onLoad()
     })
 
@@ -86,6 +89,11 @@ function f2(n) {
 
 function un18f2(n) {
     return f2(un18(n))
+}
+
+function eth2usd(eth) {
+    const eth_price = 1851
+    return un18(eth * eth_price * 100) / eth_price
 }
 
 function uiAddStaker(stake, delta_balance) {
@@ -165,6 +173,11 @@ async function loadStakesFromStorage() {
     let totalStakes = BigInt(rootHash) & ((1n << 128n) - 1n)
     items = Array.from(await lottoyield.getStakes(count, 0))
     uiTableStakers(totalStakes)
+}
+
+async function updateRewardPool() {
+    let tvl = await lottoyield.getBalance()
+    el_tvl.innerText = '$' + f2(eth2usd(tvl))
 }
 
 async function onLoad() {
