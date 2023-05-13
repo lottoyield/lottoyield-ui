@@ -1,0 +1,88 @@
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Lottoyield</title>
+  <meta name="title" content="Lottoyield">
+  <meta name="description" content="No-loss lottery">
+
+  <!-- Open Graph / Facebook -->
+  <!-- <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sign-pixels.glitch.me/">
+  <meta property="og:title" content="Sign your avatar!">
+  <meta property="og:description" content="Prove your identity easily with a signed avatar">
+  <meta property="og:image" content="https://cdn.glitch.global/71e65f74-8d13-4c28-92cf-b0918ed8aa9a/banner3.png?v=1683043865199"> -->
+
+  <!-- Twitter -->
+  <!-- <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://sign-pixels.glitch.me/">
+  <meta property="twitter:title" content="Sign your avatar!">
+  <meta property="twitter:description" content="Prove your identity easily with a signed avatar">
+  <meta name="twitter:image" content="https://cdn.glitch.global/71e65f74-8d13-4c28-92cf-b0918ed8aa9a/banner3.png?v=1683043865199">
+  <meta name="twitter:domain" content="sign-pixels.glitch.me"> -->
+  
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" integrity="sha512-FDcVY+g7vc5CXANbrTSg1K5qLyriCsGDYCE02Li1tXEYdNQPvLPHNE+rT2Mjei8N7fZbe0WLhw27j2SrGRpdMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.3.0/ethers.umd.min.js" integrity="sha512-2T4o6X9D1OQ1ZhA48zBlsDV0rUVZD7ddrHpS/a8k0FDSRCbjV4n1LJUQN3BeIawFyWazgGwcjVn1QU5YkaXuqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="./merkle.js"></script>
+</head>
+<body>
+
+<main>
+    <div style="display: flex">
+        <img src="./static/lottoyield-400x400.png" width="64" />
+        <h1>Lottoyield</h1>
+    </div>
+    
+    <div class="widget">
+        <h2>
+            <b>Rewards: </b><span>$123.45</span>
+        </h2>
+        <small>
+            <b>Total Value Locked: </b><span>$10,777,420.69</span>
+        </small>
+    </div>
+
+    <img src="./static/your_img_here.png" width="400" />
+
+    <!-- potentially connect those two widget divs -->
+    <div class="widget">
+        <input type="button" id="btn_connect" value="Connect" style="width: 100%; margin: auto" />
+        <small class="hidden">
+            balance: 6.9 ETH
+        </small>
+
+        <hr />
+        
+        <input type="text" id="txt_usd_amount" value="$90,000" style="width: 120px; text-align: right; background-color: coral; border: 0px;" disabled />
+        <br />
+
+        <span>amount:</span>
+        <input type="text" id="txt_amount" value="50" style="width: 120px; text-align: right" />
+        <input type="button" value="Send" />
+        <br />
+        <small>
+            no lockup period - funds fully liquid!
+        </small>
+    </div>
+
+    <input type="button" value="Demo - click here to test" onclick="test()" />
+
+    <div id="el_history">
+    </div>
+
+    <div id="el_stakers">
+    </div>
+</main>
+<footer>
+    <span>
+        idk
+    </span>
+    <a href="https://twitter.com/high_byte">@high_byte</a>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>
