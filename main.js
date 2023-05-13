@@ -148,7 +148,10 @@ async function test() {
     await updateItem(2, 0x40n * E18)
     await updateItem(0, -0x5n * E18)
     await updateItem(1, 0x20n * E18)
+    await updateItem(3, 0x33n * E18)
+    await updateItem(4, 0x20n * E18)
     await updateItem(2, 0x60n * E18)
+    await updateItem(5, 0x55n * E18)
     await updateItem(0, -0x0n * E18)
 }
 
