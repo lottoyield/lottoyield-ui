@@ -62,7 +62,26 @@ input[type="text"] {
     text-align: center;
 }
 
-#el_stakers {
-    display: flex;
-    flex-direction: column-reverse;
+table {
+    color: dodgerblue;
+    background-color: azure;
+    border-radius: 15px;
+    padding: 15px;
 }
+
+th {
+    border-bottom: 2px solid coral;
+}
+
+td {
+    border-bottom: 1px solid black;
+    border-radius: 5px;
+    padding: 5px;
+    animation: fadeIn 1s;
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
