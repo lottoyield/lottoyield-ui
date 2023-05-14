@@ -1,11 +1,24 @@
-const PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+const keys = [
+    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+    '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+    '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+    '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
+    '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
+    '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba',
+    '0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e',
+    '0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356',
+    '0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97',
+    '0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6',
+]
+const PRIVATE_KEY = keys[0]
 
 let TREE_HEIGHT
 let conf
 let lottoyield
 let steth
 
-const rpc_url = 'https://97a3-147-235-197-42.ngrok-free.app' // 'http://127.0.0.1:8545/'
+// const rpc_url = 'http://127.0.0.1:8545/'
+const rpc_url = 'https://97a3-147-235-197-42.ngrok-free.app'
 const rpc = new ethers.JsonRpcProvider(rpc_url)
 const wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
 
@@ -15,7 +28,7 @@ fetch('./static/conf.json')
         conf = json
         steth = new ethers.Contract(conf.steth.address, conf.steth.abi, wallet)
         lottoyield = new ethers.Contract(conf.lottoyield.address, conf.lottoyield.abi, wallet)
-        TREE_HEIGHT = await lottoyield.TREE_HEIGHT()
+        TREE_HEIGHT = parseInt(await lottoyield.TREE_HEIGHT())
 
         onLoad()
     })
@@ -38,6 +51,14 @@ function makeEmptyItem() {
 }
 
 let items = []
+
+function setDemoText(html) {
+    el_demo.style.animation = 'none';
+    el_demo.offsetHeight; /* trigger reflow */
+    el_demo.style.animation = null; 
+    el_demo.innerHTML = html
+}
+
 async function updateItem(index, delta_amount) {
     delta_amount = BigInt(delta_amount)
     console.log("updating index", index, "by", un18f2(delta_amount))
@@ -45,6 +66,8 @@ async function updateItem(index, delta_amount) {
     let localRoot = BigInt(tree[TREE_HEIGHT][0])
     let chainRoot = await lottoyield.$rootHash()
     if (localRoot != chainRoot) {
+        updateRewardPool()
+        alert('ui out of sync - trying to refresh')
         throw new Error('root mismatch')
     }
 
@@ -70,10 +93,14 @@ async function updateItem(index, delta_amount) {
     let txn = await lottoyield.update.populateTransaction(index, [delta_amount, token], proof)
     if (delta_amount > 0)
         txn.value = delta_amount
-    let resp = await wallet.sendTransaction(txn)
+
+    let tmp_wallet = new ethers.Wallet(keys[index] || PRIVATE_KEY, rpc)
+    setDemoText(`${delta_amount > 0 ? 'deposit' : 'withdraw'} ${un18f2(delta_amount)} eth using address ${tmp_wallet.address}`)
+    let resp = await tmp_wallet.sendTransaction(txn)
     let receipt = await rpc.waitForTransaction(resp.hash)
     
     // updateStakes(receipt.logs)
+    // TODO: optimize this here
     await loadStakesFromStorage()
 }
 
@@ -84,7 +111,7 @@ function un18(n) {
 }
 
 function f2(n) {
-    return (parseInt(BigInt(n) * 100n) / 100).toFixed(2)
+    return (parseInt(parseInt(n) * 100) / 100).toFixed(2)
 }
 
 function un18f2(n) {
@@ -93,7 +120,7 @@ function un18f2(n) {
 
 function eth2usd(eth) {
     const eth_price = 1851
-    return un18(eth * eth_price * 100) / eth_price
+    return un18(BigInt(eth) * BigInt(eth_price) * 100n) / eth_price
 }
 
 function uiAddStaker(stake, delta_balance) {
@@ -143,6 +170,7 @@ function onStakeUpdate(log) {
 }
 
 async function test() {
+    el_demo.innerText = ''
     await updateItem(0, 0x10n * E18)
     await updateItem(1, 0x20n * E18)
     await updateItem(2, 0x40n * E18)
@@ -152,7 +180,8 @@ async function test() {
     await updateItem(4, 0x20n * E18)
     await updateItem(2, 0x60n * E18)
     await updateItem(5, 0x55n * E18)
-    await updateItem(0, -0x0n * E18)
+    await updateItem(0, 0x10n * E18)
+    el_demo.innerText = ''
 }
 
 const evt_StakeUpdate = '0x0c4b0e8211ec0b63fc72dc635e0d45b5e1f32b00b0c8729f668b4522b40192f3'
@@ -166,7 +195,7 @@ async function loadStakesFromEvents() {
 }
 
 async function loadStakesFromStorage() {
-    let count = lottoyield.$countItems()
+    let count = await lottoyield.$countItems()
     if (count == 0) {
         items = []
         return
@@ -176,15 +205,19 @@ async function loadStakesFromStorage() {
     let totalStakes = BigInt(rootHash) & ((1n << 128n) - 1n)
     items = Array.from(await lottoyield.getStakes(count, 0))
     uiTableStakers(totalStakes)
+    
+    // TODO: this shouldn't be here
+    await updateRewardPool()
 }
 
 async function updateRewardPool() {
-    let tvl = await lottoyield.getBalance()
+    let tvl = await steth.balanceOf(conf.lottoyield.address)
     el_tvl.innerText = '$' + f2(eth2usd(tvl))
 }
 
 async function onLoad() {
     loadStakesFromStorage()
+    // updateRewardPool()
 }
 
 // async function getUserSigner() {

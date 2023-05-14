@@ -83,5 +83,18 @@ td {
 @keyframes fadeIn {
     0% { opacity: 0; }
     100% { opacity: 1; }
-  }
-  
+}
+
+
+#el_demo {
+    animation: wiggle 1.5s ease-in-out alternate;
+}
+
+@keyframes wiggle {
+    0% { scale: 1.2; }
+    20% { opacity: 1; }
+    40% { opacity: 1.2; }
+    60% { opacity: 1; }
+    80% { opacity: 1.2; }
+    100% { opacity: 1; }
+}

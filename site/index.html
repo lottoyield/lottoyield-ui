@@ -38,10 +38,10 @@
     
     <div class="widget">
         <h2>
-            <b>Rewards: </b><span id="el_rewards">$123.45</span>
+            <b>Rewards: </b><span id="el_rewards">$420.69</span>
         </h2>
         <small>
-            <b>Total Value Locked: </b><span id="el_tvl">$10,777,420.69</span>
+            <b>Total Value Locked: </b><span id="el_tvl">--- D E M O ---</span>
         </small>
     </div>
 
@@ -49,7 +49,7 @@
 
     <!-- potentially connect those two widget divs -->
     <div class="widget">
-        <input type="button" id="btn_connect" value="Connect" style="width: 100%; margin: auto" />
+        <input type="button" id="btn_connect" value="Connect" style="width: 100%; margin: auto" onclick="alert('D E M O - please use demo button')" />
         <small class="hidden">
             balance: 6.9 ETH
         </small>
@@ -61,7 +61,7 @@
 
         <span>ETH amount:</span>
         <input type="text" id="txt_amount" value="5" style="width: 120px; text-align: right" />
-        <input type="button" value="Send" />
+        <input type="button" value="Send" onclick="alert('D E M O - please use demo button')" />
         <br />
         <small>
             no lockup period - funds fully liquid!
@@ -69,6 +69,7 @@
     </div>
 
     <input type="button" value="Demo - click here to test" onclick="test()" />
+    <p id="el_demo"></p>
 
     <div id="el_history">
     </div>
