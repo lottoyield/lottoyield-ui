@@ -1,6 +1,8 @@
-FROM nginx:alpine
-COPY site /usr/share/nginx/html
-
-# install foundry
-RUN curl -L https://foundry.paradigm.xyz | sh
-RUN foundryup
+FROM markmark206/alpine-bash-curl-jq-git-perl-python-ssh:latest
+SHELL ["/bin/bash", "-c"]
+ENV SHELL=/bin/bash
+RUN curl -kL https://foundry.paradigm.xyz | sh
+#RUN source ~/.bashrc
+#ENV PATH="~/.foundry/bin:${PATH}"
+RUN ~/.foundry/bin/foundryup
+#RUN ~/.foundry/bin/anvil
