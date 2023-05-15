@@ -212,6 +212,9 @@ async function loadStakesFromEvents() {
 }
 
 async function loadStakesFromStorage() {
+    // TODO: this shouldn't be here
+    await updateRewardPool()
+
     let count = await lottoyield.$countItems()
     if (count == 0) {
         items = []
@@ -222,9 +225,6 @@ async function loadStakesFromStorage() {
     let totalStakes = BigInt(rootHash) & ((1n << 128n) - 1n)
     items = Array.from(await lottoyield.getStakes(count, 0)).map(({owner, balance, shares}) => {return {owner, balance, shares}})
     uiTableStakers(totalStakes)
-    
-    // TODO: this shouldn't be here
-    await updateRewardPool()
 }
 
 async function updateRewardPool() {
