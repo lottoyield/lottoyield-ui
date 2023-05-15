@@ -21,8 +21,7 @@ let steth
 let browser_provider = new ethers.BrowserProvider(window.ethereum)
 
 // const rpc_url = 'http://127.0.0.1:8545/'
-// TODO: setup dedicated anvil env
-const rpc_url = 'https://97a3-147-235-197-42.ngrok-free.app'
+const rpc_url = `https://${window.location.hostname}:8545/`
 const rpc = new ethers.JsonRpcProvider(rpc_url)
 const empty_wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
 let user_wallet
