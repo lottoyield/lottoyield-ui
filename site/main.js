@@ -17,17 +17,21 @@ let conf
 let lottoyield
 let steth
 
+
+let browser_provider = new ethers.BrowserProvider(window.ethereum)
+
 // const rpc_url = 'http://127.0.0.1:8545/'
 const rpc_url = 'https://97a3-147-235-197-42.ngrok-free.app'
 const rpc = new ethers.JsonRpcProvider(rpc_url)
-const wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
+const empty_wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
+let user_wallet
 
 fetch('./static/conf.json')
     .then(res => res.json())
     .then(async (json) => {
         conf = json
-        steth = new ethers.Contract(conf.steth.address, conf.steth.abi, wallet)
-        lottoyield = new ethers.Contract(conf.lottoyield.address, conf.lottoyield.abi, wallet)
+        steth = new ethers.Contract(conf.steth.address, conf.steth.abi, empty_wallet)
+        lottoyield = new ethers.Contract(conf.lottoyield.address, conf.lottoyield.abi, empty_wallet)
         TREE_HEIGHT = parseInt(await lottoyield.TREE_HEIGHT())
 
         onLoad()
@@ -59,7 +63,17 @@ function setDemoText(html) {
     el_demo.innerHTML = html
 }
 
-async function updateItem(index, delta_amount) {
+async function updateItem(index, delta_amount, use_wallet=false) {
+    setDemoText('')
+    let wallet
+    if (use_wallet) {
+        wallet = user_wallet
+    } else {
+        // tmp wallet from known private key for demo testing
+        wallet = new ethers.Wallet(keys[index] || PRIVATE_KEY, rpc)
+    }
+    
+    index = parseInt(index)
     delta_amount = BigInt(delta_amount)
     console.log("updating index", index, "by", un18f2(delta_amount))
     let tree = merklizeItems(items, TREE_HEIGHT)
@@ -67,7 +81,7 @@ async function updateItem(index, delta_amount) {
     let chainRoot = await lottoyield.$rootHash()
     if (localRoot != chainRoot) {
         updateRewardPool()
-        alert('ui out of sync - trying to refresh')
+        alert('D E M O - please wait for transactions to finish\n(some wallets lose track of transactions, let me refresh that for you)')
         throw new Error('root mismatch')
     }
 
@@ -94,24 +108,29 @@ async function updateItem(index, delta_amount) {
     if (delta_amount > 0)
         txn.value = delta_amount
 
-    let tmp_wallet = new ethers.Wallet(keys[index] || PRIVATE_KEY, rpc)
-    setDemoText(`${delta_amount > 0 ? 'deposit' : 'withdraw'} ${un18f2(delta_amount)} eth using address ${tmp_wallet.address}`)
-    let resp = await tmp_wallet.sendTransaction(txn)
+    setDemoText(`${delta_amount > 0 ? 'deposit' : 'withdraw'} ${un18f2(delta_amount)} eth using address ${wallet.address}`)
+    let resp = await wallet.sendTransaction(txn)
+    setDemoText(`sent: ${resp.hash}`)
+
     let receipt = await rpc.waitForTransaction(resp.hash)
     
+    setDemoText(`receipt: ${receipt.logs.length} logs`)
+
     // updateStakes(receipt.logs)
     // TODO: optimize this here
     await loadStakesFromStorage()
+    setDemoText('')
 }
 
 const E18 = 1000000000000000000n
 const E16 = 10000000000000000n
+const E15 = 1000000000000000n
 function un18(n) {
-    return parseInt(BigInt(n) / E16) / 100.0
+    return parseInt(BigInt(n) / E15) / 1000.0
 }
 
 function f2(n) {
-    return (parseInt(parseInt(n) * 100) / 100).toFixed(2)
+    return ((n * 1000) / 1000).toFixed(2)
 }
 
 function un18f2(n) {
@@ -121,6 +140,12 @@ function un18f2(n) {
 function eth2usd(eth) {
     const eth_price = 1851
     return un18(BigInt(eth) * BigInt(eth_price) * 100n) / eth_price
+}
+
+function eth2usdstr(eth) {
+    const eth_price = 1851
+    let usd = parseFloat(eth) * eth_price
+    return '$' + f2(usd)
 }
 
 function uiAddStaker(stake, delta_balance) {
@@ -152,7 +177,7 @@ function uiTableStakers(total_stakes) {
         staker.innerHTML = `
             <td>${stake.owner}</td>
             <td>${un18f2(stake.balance)}</td>
-            <td>${f2(stake.shares * 100n / total_stakes)}%</td>
+            <td>${f2(parseInt(stake.shares * 100000n / total_stakes) / 1000)}%</td>
         `
         el_stakers.appendChild(staker)
     }
@@ -170,7 +195,6 @@ function onStakeUpdate(log) {
 }
 
 async function test() {
-    el_demo.innerText = ''
     await updateItem(0, 0x10n * E18)
     await updateItem(1, 0x20n * E18)
     await updateItem(2, 0x40n * E18)
@@ -181,7 +205,6 @@ async function test() {
     await updateItem(2, 0x60n * E18)
     await updateItem(5, 0x55n * E18)
     await updateItem(0, 0x10n * E18)
-    el_demo.innerText = ''
 }
 
 const evt_StakeUpdate = '0x0c4b0e8211ec0b63fc72dc635e0d45b5e1f32b00b0c8729f668b4522b40192f3'
@@ -203,7 +226,7 @@ async function loadStakesFromStorage() {
 
     let rootHash = await lottoyield.$rootHash()
     let totalStakes = BigInt(rootHash) & ((1n << 128n) - 1n)
-    items = Array.from(await lottoyield.getStakes(count, 0))
+    items = Array.from(await lottoyield.getStakes(count, 0)).map(({owner, balance, shares}) => {return {owner, balance, shares}})
     uiTableStakers(totalStakes)
     
     // TODO: this shouldn't be here
@@ -215,15 +238,51 @@ async function updateRewardPool() {
     el_tvl.innerText = '$' + f2(eth2usd(tvl))
 }
 
+async function sendDeposit(eth) {
+    // make sure most up to date wallet is used
+    // await walletSoftConnect()
+
+    try {
+        let index = await lottoyield.$countItems()
+        
+        // TODO: remove, this is DEMO ONLY
+        index = parseInt(index) % keys.length
+        use_wallet = false // true
+
+        await updateItem(index, eth, use_wallet)
+    } catch (err) {
+        // refresh items to sync back in case of error (temp solution)
+        await loadStakesFromStorage()
+        throw err
+    }
+}
+
+async function requestAccounts() {
+    return window.ethereum.request({ method: "eth_requestAccounts" })
+}
+
+// get account info only if wallet already connected
+async function walletSoftConnect() {
+    let accounts = await window.ethereum.request({ method: "eth_accounts" })
+    if (!accounts || accounts.length == 0) {
+        return false
+    }
+
+    user_wallet = await browser_provider.getSigner(0)
+    btn_connect.value = accounts[0]
+    return true
+}
+
+// pop-up wallet extension if necessary
+async function walletHardConnect() {
+    if (!walletSoftConnect()) {
+        requestAccounts().then(walletSoftConnect)
+    }
+}
+
 async function onLoad() {
+    walletSoftConnect()
+
     loadStakesFromStorage()
     // updateRewardPool()
 }
-
-// async function getUserSigner() {
-//   const provider = new ethers.providers.Web3Provider(window.ethereum);
-//   let accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-//   const signer = await provider.getSigner(accounts[0])
-//   return signer
-// }
-

@@ -49,19 +49,19 @@
 
     <!-- potentially connect those two widget divs -->
     <div class="widget">
-        <input type="button" id="btn_connect" value="Connect" style="width: 100%; margin: auto" onclick="alert('D E M O - please use demo button')" />
+        <input type="button" id="btn_connect" value="Connect" style="width: 100%; margin: auto" onclick="walletHardConnect()" />
         <small class="hidden">
             balance: 6.9 ETH
         </small>
 
         <hr />
         
-        <input type="text" id="txt_usd_amount" value="$9,255" style="width: 120px; text-align: right; background-color: coral; border: 0px;" disabled />
+        <input type="text" id="txt_usd_amount" value="$9,255" style="width: 160px; text-align: right; background-color: coral; border: 0px;" disabled />
         <br />
 
         <span>ETH amount:</span>
-        <input type="text" id="txt_amount" value="5" style="width: 120px; text-align: right" />
-        <input type="button" value="Send" onclick="alert('D E M O - please use demo button')" />
+        <input type="text" id="txt_amount" value="5" maxlength="5" style="width: 120px; text-align: right" oninput="txt_usd_amount.value = eth2usdstr(this.value)" />
+        <input type="button" value="Send" onclick="sendDeposit(BigInt(parseFloat(txt_amount.value) * 1000) * E15)" />
         <br />
         <small>
             no lockup period - funds fully liquid!

@@ -1,6 +1,9 @@
+* {
+    font-family: Roboto Mono, monospace;
+}
+
 body {
     background-color: blanchedalmond;
-    font-family: Roboto Mono, monospace;
 }
 
 main {
