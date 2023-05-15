@@ -63,15 +63,9 @@ function setDemoText(html) {
     el_demo.innerHTML = html
 }
 
-function setManaText(receipt) {
-    // let mana_price = receipt.gasPrice
-    let mana_str = parseInt(((mana_price * receipt.gasUsed) * 1851n) / E15) / 1000
-    el_mana.innerText = `txn price: $${mana_str}`
-}
-
 async function updateItem(index, delta_amount, use_wallet=false) {
     if (index < 0 || index > items.length || index >= 2**TREE_HEIGHT) {
-        alert('bad index\n(note: new deposits must be the next index which is ' + items.length + ')')
+        alert('bad index')
         return false
     }
 
@@ -92,8 +86,8 @@ async function updateItem(index, delta_amount, use_wallet=false) {
     let localRoot = BigInt(tree[TREE_HEIGHT][0])
     let chainRoot = await lottoyield.$rootHash()
     if (localRoot != chainRoot) {
-        loadStakesFromStorage()
-        setDemoText('D E M O - please wait for transactions to finish')
+        updateRewardPool()
+        setDemoText('D E M O - please wait for transactions to finish\n(some wallets lose track of transactions, let me refresh that for you)')
         throw new Error('root mismatch')
     }
 
@@ -125,7 +119,6 @@ async function updateItem(index, delta_amount, use_wallet=false) {
     setDemoText(`sent: ${resp.hash}`)
 
     let receipt = await rpc.waitForTransaction(resp.hash)
-    setManaText(receipt)
     
     setDemoText(`receipt: ${receipt.logs.length} logs`)
 
@@ -150,13 +143,13 @@ function un18f2(n) {
     return f2(un18(n))
 }
 
-const eth_price = 1851
-const mana_price = 9746782242n
 function eth2usd(eth) {
+    const eth_price = 1851
     return un18(BigInt(eth) * BigInt(eth_price) * 100n) / eth_price
 }
 
-function smoleth2usdstr(eth) {
+function eth2usdstr(eth) {
+    const eth_price = 1851
     let usd = parseFloat(eth) * eth_price
     return '$' + f2(usd)
 }
@@ -317,8 +310,6 @@ async function testEndRound() {
     let res = await lottoyield.nextRound()
     setDemoText(`sent: ${res.hash}`)
     let receipt = await rpc.waitForTransaction(res.hash)
-    setManaText(receipt)
-
     let log = receipt.logs[0]
     let [root_hash, random, reward] = encoder.decode(['uint256','uint128','uint128'], log.data)
     root_hash = root_hash.toString(16)
@@ -359,16 +350,9 @@ async function testClaimWin() {
     let tree = merklizeItems(items, TREE_HEIGHT)
     let proof = getProof(tree, idx)
     try {
-        let res = await lottoyield.claimReward(round_id, winner_idx, items[idx].balance, items[idx].shares, proof)
-        let receipt = await rpc.waitForTransaction(res.hash)
-        setManaText(receipt)
+        await lottoyield.claimReward(round_id, winner_idx, items[idx].balance, items[idx].shares, proof)
         setDemoText('reward claimed (0 schmekels for demo)')
     } catch (err) {
-        if (err.reason == 'invalid claim proof') {
-            testEndRound()
-            alert('demo does not yet implement reading events from chain.\n(check again tomorrow)\nfor now, claim rewards immediately after round end.\nlet me do that for you...')
-            return
-        }
         alert(err)
     }
 }

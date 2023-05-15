@@ -60,7 +60,7 @@
         <br />
 
         <span>ETH amount:</span>
-        <input type="text" id="txt_amount" value="5" maxlength="5" style="width: 120px; text-align: right" oninput="txt_usd_amount.value = smoleth2usdstr(this.value)" />
+        <input type="text" id="txt_amount" value="5" maxlength="5" style="width: 120px; text-align: right" oninput="txt_usd_amount.value = eth2usdstr(this.value)" />
         <input type="button" value="Send" onclick="sendDeposit(BigInt(parseFloat(txt_amount.value) * 1000) * E15)" />
         <br />
         <small>
@@ -72,7 +72,7 @@
 
     <h1>DEMO:</h1>
     <small>for your convenience here is a wallet-less demo</small>
-    <div class="widget" style="width: 90%">
+    <div class="widget">
         <div>
             <span>account #</span>
             <input type="number" id="el_demo_idx" value="0" min="0" max="9" />
@@ -85,7 +85,6 @@
             <!-- <input type="button" value="reset chain" onclick="testResetChain()" /> -->
         </div>
         <p id="el_demo" style="height: 15px"></p>
-        <p id="el_mana" style="height: 15px"></p>
     </div>
 
     <div id="el_history">
