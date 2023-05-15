@@ -90,7 +90,7 @@ td {
 
 
 #el_demo {
-    animation: wiggle 1.5s ease-in-out alternate;
+    animation: wiggle 0.5s ease-in-out alternate;
 }
 
 @keyframes wiggle {

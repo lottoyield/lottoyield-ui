@@ -12,7 +12,7 @@ const keys = [
 ]
 const PRIVATE_KEY = keys[0]
 
-let TREE_HEIGHT
+let TREE_HEIGHT = 0
 let conf
 let lottoyield
 let steth
@@ -65,12 +65,12 @@ function setDemoText(html) {
 }
 
 async function updateItem(index, delta_amount, use_wallet=false) {
-    if (index < 0 || index >= items.length) {
+    if (index < 0 || index > items.length || index >= 2**TREE_HEIGHT) {
         alert('bad index')
         return false
     }
 
-    setDemoText('')
+    // setDemoText('')
     index = parseInt(index)
 
     let wallet
@@ -126,7 +126,7 @@ async function updateItem(index, delta_amount, use_wallet=false) {
     // updateStakes(receipt.logs)
     // TODO: optimize this here
     await loadStakesFromStorage()
-    setDemoText('')
+    // setDemoText('')
 }
 
 const E18 = 1000000000000000000n
@@ -199,19 +199,6 @@ function onStakeUpdate(log) {
     items[depositId] = makeItem(balance, shares, owner)
     // console.log(`[${depositId}] ${owner} ${balance} ${shares}`)
     uiAddStaker(items[depositId], delta_balance)
-}
-
-async function test() {
-    await updateItem(0, 0x10n * E18)
-    await updateItem(1, 0x20n * E18)
-    await updateItem(2, 0x40n * E18)
-    await updateItem(0, -0x5n * E18)
-    await updateItem(1, 0x20n * E18)
-    await updateItem(3, 0x33n * E18)
-    await updateItem(4, 0x20n * E18)
-    await updateItem(2, 0x60n * E18)
-    await updateItem(5, 0x55n * E18)
-    await updateItem(0, 0x10n * E18)
 }
 
 const evt_StakeUpdate = '0x0c4b0e8211ec0b63fc72dc635e0d45b5e1f32b00b0c8729f668b4522b40192f3'
@@ -292,4 +279,88 @@ async function onLoad() {
 
     loadStakesFromStorage()
     // updateRewardPool()
+}
+
+
+
+/* DEMO UTILS */
+
+
+function getDemoIndex() {
+    return parseInt(el_demo_idx.value)
+}
+
+async function testDeposit() {
+    await updateItem(getDemoIndex(), BigInt(parseInt(0x1000 * Math.random())) * E16)
+}
+
+async function testWithdraw() {
+    let idx = getDemoIndex()
+    await updateItem(idx, -items[idx].balance)
+}
+
+async function testEndRound() {
+    let next_block = parseInt(await lottoyield.nextRoundBlock())
+    let current_block = parseInt(await rpc.getBlockNumber())
+    let dist = next_block - current_block
+    if (dist > 0) {
+        setDemoText(`forwarding to block ${next_block} (+${dist})`)
+        await rpc.send('anvil_mine', [dist.toString(16)])
+    }
+
+    let res = await lottoyield.nextRound()
+    setDemoText(`sent: ${res.hash}`)
+    let receipt = await rpc.waitForTransaction(res.hash)
+    let log = receipt.logs[0]
+    let [root_hash, random, reward] = encoder.decode(['uint256','uint128','uint128'], log.data)
+    root_hash = root_hash.toString(16)
+    random = random.toString(16)
+    setDemoText(`root: ${root_hash.substr(0,3)}..${root_hash.substr(-3)} random: ${random.substr(0,3)}..${random.substr(-3)} reward: ${un18f2(reward)}`)
+    
+}
+
+async function getWinnerIndex(round_id) {
+    let round = await lottoyield.rounds(round_id)
+    let total_stakes = round.rootHash & (2n**128n-1n)
+    let lucky = round.random % total_stakes
+    let sum = 0n
+    len = parseInt(await lottoyield.$countItems())
+    for (let i = 0; i < len; i++) {
+        sum += items[i].shares
+        if (sum > lucky)
+            return i;
+    }
+    throw("no lucky winner? (must be a bug)")
+}
+
+async function testClaimWin() {
+    let count = parseInt(await lottoyield.numRounds())
+    if (count == 0) {
+        setDemoText('no rounds yet')
+        return
+    }
+    let round_id = count - 1
+    let idx = getDemoIndex()
+    let winner_idx = await getWinnerIndex(round_id)
+    if (idx != winner_idx) {
+        setDemoText(`not winner (psst... winner is #${winner_idx})`)
+        return
+    }
+
+    // claimReward(uint128 roundId, uint128 index, uint128 balance, uint128 shares, uint256[] calldata proof) external {
+    let tree = merklizeItems(items, TREE_HEIGHT)
+    let proof = getProof(tree, idx)
+    try {
+        await lottoyield.claimReward(round_id, winner_idx, items[idx].balance, items[idx].shares, proof)
+        setDemoText('reward claimed (0 schmekels for demo)')
+    } catch (err) {
+        alert(err)
+    }
+}
+
+async function testResetChain() {
+    setDemoText('resetting test chain...')
+    await rpc.send('anvil_reset', [])
+    loadStakesFromStorage()
+    // setDemoText('')
 }

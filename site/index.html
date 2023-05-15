@@ -68,8 +68,24 @@
         </small>
     </div>
 
-    <input type="button" value="Demo - click here to test" onclick="test()" />
-    <p id="el_demo"></p>
+    <span style="border-bottom: 1px solid black; width: 100%"></span>
+
+    <h1>DEMO:</h1>
+    <small>for your convenience here is a wallet-less demo</small>
+    <div class="widget">
+        <div>
+            <span>account #</span>
+            <input type="number" id="el_demo_idx" value="0" min="0" max="9" />
+            <input type="button" value="deposit" onclick="testDeposit()" />
+            <input type="button" value="withdraw" onclick="testWithdraw()" />
+        </div>
+        <div>
+            <input type="button" value="end round" onclick="testEndRound()" />
+            <input type="button" value="claim win (last round)" onclick="testClaimWin()" />
+            <!-- <input type="button" value="reset chain" onclick="testResetChain()" /> -->
+        </div>
+        <p id="el_demo" style="height: 15px"></p>
+    </div>
 
     <div id="el_history">
     </div>
