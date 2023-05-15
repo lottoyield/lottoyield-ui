@@ -1,25 +1,13 @@
 # install foundry
-FROM markmark206/alpine-bash-curl-jq-git-perl-python-ssh:latest
-SHELL ["/bin/bash", "-c"]
-
 FROM ubuntu:20.04
 RUN apt-get update
-#RUN apt-get install -y bash curl git
-
-ENV SHELL=/bin/bash
-
-#COPY ./getfoundry.sh ./getfoundry.sh
-#RUN sh ./getfoundry.sh
-
-RUN curl -kL https://foundry.paradigm.xyz | sh
-
-#RUN source ~/.bashrc
-#ENV PATH="~/.foundry/bin:${PATH}"
-#RUN chmod +x ~/.foundry/bin/*
+RUN apt-get install -y bash curl gcc git nginx
+#ENV SHELL=/bin/bash
+SHELL ["/bin/bash", "-c"]
+RUN curl -kL https://foundry.paradigm.xyz | bash
 RUN ~/.foundry/bin/foundryup
-RUN ~/.foundry/bin/anvil
-
 EXPOSE 8545
+RUN ~/.foundry/bin/anvil
 
 # install nginx
 #FROM nginx:alpine
