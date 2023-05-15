@@ -65,15 +65,16 @@ function setDemoText(html) {
 
 async function updateItem(index, delta_amount, use_wallet=false) {
     setDemoText('')
+    index = parseInt(index)
+
     let wallet
     if (use_wallet) {
         wallet = user_wallet
     } else {
         // tmp wallet from known private key for demo testing
-        wallet = new ethers.Wallet(keys[index] || PRIVATE_KEY, rpc)
+        wallet = new ethers.Wallet(keys[index % keys.length] || PRIVATE_KEY, rpc)
     }
     
-    index = parseInt(index)
     delta_amount = BigInt(delta_amount)
     console.log("updating index", index, "by", un18f2(delta_amount))
     let tree = merklizeItems(items, TREE_HEIGHT)
@@ -246,7 +247,7 @@ async function sendDeposit(eth) {
         let index = await lottoyield.$countItems()
         
         // TODO: remove, this is DEMO ONLY
-        index = parseInt(index) % keys.length
+        // index = parseInt(index) % keys.length
         use_wallet = false // true
 
         await updateItem(index, eth, use_wallet)
@@ -275,7 +276,7 @@ async function walletSoftConnect() {
 
 // pop-up wallet extension if necessary
 async function walletHardConnect() {
-    if (!walletSoftConnect()) {
+    if (!await walletSoftConnect()) {
         requestAccounts().then(walletSoftConnect)
     }
 }
