@@ -21,6 +21,7 @@ let steth
 let browser_provider = new ethers.BrowserProvider(window.ethereum)
 
 // const rpc_url = 'http://127.0.0.1:8545/'
+// TODO: setup dedicated anvil env
 const rpc_url = 'https://97a3-147-235-197-42.ngrok-free.app'
 const rpc = new ethers.JsonRpcProvider(rpc_url)
 const empty_wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
@@ -64,6 +65,11 @@ function setDemoText(html) {
 }
 
 async function updateItem(index, delta_amount, use_wallet=false) {
+    if (index < 0 || index >= items.length) {
+        alert('bad index')
+        return false
+    }
+
     setDemoText('')
     index = parseInt(index)
 
@@ -82,7 +88,7 @@ async function updateItem(index, delta_amount, use_wallet=false) {
     let chainRoot = await lottoyield.$rootHash()
     if (localRoot != chainRoot) {
         updateRewardPool()
-        alert('D E M O - please wait for transactions to finish\n(some wallets lose track of transactions, let me refresh that for you)')
+        setDemoText('D E M O - please wait for transactions to finish\n(some wallets lose track of transactions, let me refresh that for you)')
         throw new Error('root mismatch')
     }
 
@@ -247,7 +253,7 @@ async function sendDeposit(eth) {
         let index = await lottoyield.$countItems()
         
         // TODO: remove, this is DEMO ONLY
-        // index = parseInt(index) % keys.length
+        index = parseInt(index) % (1 << TREE_HEIGHT)
         use_wallet = false // true
 
         await updateItem(index, eth, use_wallet)
