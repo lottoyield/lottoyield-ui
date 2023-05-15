@@ -1,10 +1,11 @@
 # install foundry
+FROM markmark206/alpine-bash-curl-jq-git-perl-python-ssh:latest
+SHELL ["/bin/bash", "-c"]
+
 FROM ubuntu:20.04
 RUN apt-get update
-RUN apt-get install -y bash curl git
+#RUN apt-get install -y bash curl git
 
-#FROM markmark206/alpine-bash-curl-jq-git-perl-python-ssh:latest
-#SHELL ["/bin/bash", "-c"]
 ENV SHELL=/bin/bash
 
 #COPY ./getfoundry.sh ./getfoundry.sh
