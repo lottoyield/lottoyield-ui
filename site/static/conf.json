@@ -188,7 +188,7 @@
           ]
     },
     "lottoyield": {
-        "address": "0xf4ae7e15b1012edced8103510eeb560a9343afd3",
+        "address": "0xc981ec845488b8479539e6b22dc808fb824db00a",
         "abi": [{
             "inputs": [
             {
@@ -646,6 +646,25 @@
                 "name": "",
                 "type": "uint128"
             }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                "internalType": "uint128",
+                "name": "lucky",
+                "type": "uint128"
+                }
+            ],
+            "name": "getWinnerIndex",
+            "outputs": [
+                {
+                "internalType": "uint128",
+                "name": "i",
+                "type": "uint128"
+                }
             ],
             "stateMutability": "view",
             "type": "function"

@@ -26,6 +26,8 @@
 
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" integrity="sha512-FDcVY+g7vc5CXANbrTSg1K5qLyriCsGDYCE02Li1tXEYdNQPvLPHNE+rT2Mjei8N7fZbe0WLhw27j2SrGRpdMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.3.0/ethers.umd.min.js" integrity="sha512-2T4o6X9D1OQ1ZhA48zBlsDV0rUVZD7ddrHpS/a8k0FDSRCbjV4n1LJUQN3BeIawFyWazgGwcjVn1QU5YkaXuqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+
   <script src="./merkle.js"></script>
 </head>
 <body>
@@ -88,23 +90,43 @@
         <p id="el_mana" style="height: 15px"></p>
     </div>
 
-    <div id="el_history">
-    </div>
-
     <table id="el_stakers">
         <tr>
             <th>Address</th>
-            <th>Change</th>
             <th>Balance</th>
+            <th>Chances</th>
+            <th>Wins</th>
+        </tr>
+    </table>
+
+    <table id="el_rounds">
+        <tr>
+            <th>Round</th>
+            <th>Winner</th>
+            <th>Reward</th>
             <th>Chances</th>
         </tr>
     </table>
 </main>
-<footer>
-    <span>
-        Made with ❤️ by
-    </span>
-    <a href="https://twitter.com/high_byte">@high_byte</a>
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+<hr />
+
+<footer style="display: flex; justify-content: space-around;">
+    <div>
+        Made with ❤️ by <a href="https://twitter.com/high_byte">@high_byte</a>
+    </div>
+    <div>
+        <a href="https://twitter.com/lottoyield"><img src="./static/twitter.svg" width="16" alt="Twitter" /></a>
+        <a href="https://discord.gg/m2KP27FB"><img src="./static/discord.svg" width="16" alt="Discord" /></a>
+        <a href="https://github.com/lottoyield"><img src="./static/github.svg" width="16" alt="Github" /></a>
+        <a href="https://docs.google.com/document/d/1obNXtFeuR63Qbhk7k9glvypKe3v-LlmZ60H6cfcx61U"><img src="./static/paper2.svg" width="16" alt="Paper" /></a>
+    </div>
 </footer>
 
 <script src="./main.js"></script>

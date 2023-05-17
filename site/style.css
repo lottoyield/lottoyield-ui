@@ -17,6 +17,7 @@ h1 {
 }
 
 .widget {
+    width: 380px;
     border-radius: 15px;
     background-color: coral;
     color: white;
@@ -70,6 +71,8 @@ table {
     background-color: azure;
     border-radius: 15px;
     padding: 15px;
+    margin: 15px;
+    width: 80%;
 }
 
 th {
@@ -81,6 +84,7 @@ td {
     border-radius: 5px;
     padding: 5px;
     animation: fadeIn 1s;
+    text-align: center;
 }
 
 @keyframes fadeIn {

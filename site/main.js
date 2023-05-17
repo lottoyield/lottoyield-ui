@@ -18,11 +18,23 @@ let lottoyield
 let steth
 
 
+// code blessing: may the odds always be in your favor
+const jsConfetti = new JSConfetti()
+function playConfetti() {
+    jsConfetti.addConfetti({
+        confettiRadius: 5,
+        confettiNumber: 150
+    })
+    jsConfetti.addConfetti({
+        emojis: ['🦄', '💎', '💎', '🪙', '💰', '⚡️', '💥', '✨', '💫', '🔷', '🔹', '♦️'],
+        emojiSize: 50,
+        confettiNumber: 150
+    })
+}
+
 let browser_provider = new ethers.BrowserProvider(window.ethereum)
 
-// const rpc_url = 'http://127.0.0.1:8545/'
-// TODO: setup dedicated anvil env
-const rpc_url = 'https://anvil-fork-production.up.railway.app/'
+const rpc_url = (window.location.hostname != '127.0.0.1' ? 'https://anvil-fork-production.up.railway.app/' : 'http://127.0.0.1:8545/')
 const rpc = new ethers.JsonRpcProvider(rpc_url)
 const empty_wallet = new ethers.Wallet(PRIVATE_KEY, rpc)
 let user_wallet
@@ -43,7 +55,7 @@ let addr = (a) => '0x' + (new ethers.AbiCoder()).encode(['uint160'], [a]).slice(
 let uint128 = (n) => '0x' + (new ethers.AbiCoder()).encode(['uint128'], [n]).slice(34)
 let int128 = (n) => '0x' + (new ethers.AbiCoder()).encode(['int128'], [n]).slice(34)
 
-function makeItem(balance, shares, owner) {
+function makeStake(balance, shares, owner) {
     return {
         balance: BigInt(balance || 0),
         shares: BigInt(shares || 0),
@@ -52,10 +64,25 @@ function makeItem(balance, shares, owner) {
 }
 
 function makeEmptyItem() {
-    return makeItem(0, 0, 0)
+    return makeStake(0, 0, 0)
 }
 
+function makeRound(block, hash, random, reward) {
+    return {
+        hash: hash,
+        total_stakes: (hash % 2n**128n),
+        random: BigInt(random),
+        lucky: random % (hash % 2n**128n),
+        reward: BigInt(reward),
+        block: parseInt(block)
+    }
+    // TODO: find winner
+}
+
+// TODO: rename to stakes
 let items = []
+let rounds = []
+let claims = {}
 
 function setDemoText(html) {
     el_demo.style.animation = 'none';
@@ -162,16 +189,6 @@ function smoleth2usdstr(eth) {
     return '$' + f2(usd)
 }
 
-function uiAddStaker(stake, delta_balance) {
-    let staker = document.createElement('tr')
-    staker.innerHTML = `
-        <td>${stake.owner}</td>
-        <td>${delta_balance>0?'+':''}${un18f2(delta_balance)}</td>
-        <td>${un18f2(stake.balance)} / ${un18f2(stake.shares)}</td>
-    `
-    el_stakers.appendChild(staker)
-}
-
 function uiTableStakers(total_stakes) {
     if (total_stakes == 0n)
         total_stakes = 1n
@@ -186,36 +203,140 @@ function uiTableStakers(total_stakes) {
     el_stakers.appendChild(header)
 
     for (let i = 0; i < items.length; i++) {
-        let staker = document.createElement('tr')
+        let el_stake = document.createElement('tr')
+        el_stake.id = 'el_stake_' + i
+         
         let stake = items[i]
-        staker.innerHTML = `
-            <td>${stake.owner}</td>
+        el_stake.innerHTML = `
+            <td><a href="https://etherscan.io/address/${stake.owner}">${stake.owner}</a></td>
             <td>${un18f2(stake.balance)}</td>
             <td>${f2(parseInt(stake.shares * 100000n / total_stakes) / 1000)}%</td>
         `
-        el_stakers.appendChild(staker)
+        el_stakers.appendChild(el_stake)
     }
 }
 
-function onStakeUpdate(log) {
+function uiTableHistory() {
+    el_rounds.innerHTML = ''
+
+    let header = document.createElement('tr')
+    header.innerHTML = `
+        <th>Round</th>
+        <th>Winner</th>
+        <th>Reward</th>
+        <th>Chance</th>
+        <th>Claimed?</th>
+    `
+    el_rounds.appendChild(header)
+
+    for (let i = rounds.length - 1; i >= 0; i--) {
+        let el_round = document.createElement('tr')
+        el_round.id = 'el_round_' + i
+
+        let round = rounds[i]
+        el_round.innerHTML = `
+            <td>${i}</td>
+            <td><a href="https://etherscan.io/address/${round.winner}">${round.winner}</a></td>
+            <td>$${f2(eth2usd(round.reward))}</td>
+            <td>${f2(parseInt(round.winner_shares * 100000n / round.total_stakes) / 1000)}%</td>
+            <td>${claims[i] ? 'V' : ''}</td>
+        `
+        el_rounds.appendChild(el_round)
+    }
+}
+
+function uiUpdateStake(id) {
+    let stake = items[id]
+    let el_stake = document.getElementById('stake_' + id)
+    if (!el_stake) {
+        el_stake = document.createElement('tr')
+        el_stakers.appendChild(el_stake)
+    }
+
+    el_stake.innerHTML = `
+        <td><a href="https://etherscan.io/address/${stake.owner}">${stake.owner}</a></td>
+        <td>${un18f2(stake.balance)}</td>
+        <td>${f2(parseInt(stake.shares * 100000n / total_stakes) / 1000)}%</td>
+        <td></td>
+    `
+}
+
+async function onEvent_StakeUpdate(log) {
     let [_, depositId, owner] = log.topics
     depositId = parseInt(depositId)
     let [balance, shares] = encoder.decode(['uint128', 'uint128'], log.data)
-    let prev_balance = items[depositId].balance
-    let delta_balance = balance - prev_balance
-    items[depositId] = makeItem(balance, shares, owner)
+    // let prev_balance = items[depositId].balance
+    // let delta_balance = balance - prev_balance
     // console.log(`[${depositId}] ${owner} ${balance} ${shares}`)
-    uiAddStaker(items[depositId], delta_balance)
+    
+    items[depositId] = makeStake(balance, shares, owner)
+    // uiUpdateStake(depositId)
 }
 
-const evt_StakeUpdate = '0x0c4b0e8211ec0b63fc72dc635e0d45b5e1f32b00b0c8729f668b4522b40192f3'
-function updateStakes(logs) {
-    logs.filter((log) => log.topics[0] == evt_StakeUpdate).map(onStakeUpdate)
+async function onEvent_RewardClaimed(log) {
+    let [_, roundId, owner] = log.topics
+    roundId = parseInt(roundId)
+    let [reward] = encoder.decode(['uint128'], log.data)
+    // ...
+    console.log(`[RewardClaimed:${roundId}] ${addr(owner)} ${un18f2(reward)}`)
+    claims[roundId] = true
 }
 
-async function loadStakesFromEvents() {
-    let logs = await lottoyield.queryFilter('StakeUpdate')
-    updateStakes(logs)
+async function onEvent_RoundEnded(log) {
+    let [_, roundId] = log.topics
+    roundId = parseInt(roundId)
+    let [hash, random, reward] = encoder.decode(['uint256', 'uint128', 'uint128'], log.data)
+    // ...
+    let block_num = '0x' + parseInt(log.blockNumber).toString(16)
+    // let block = await rpc.getBlock(block_num)
+    let round = makeRound(block_num, hash, random, reward)
+    // console.log(`[RoundEnded:${roundId}] ${round.lucky}`)
+    let calldata = await lottoyield.getWinnerIndex.populateTransaction(round.lucky)
+    let winner_index = parseInt(await rpc.send('eth_call', [calldata, block_num]))
+    let calldata2 = await lottoyield.getUserShares.populateTransaction(winner_index)
+    let winner_shares_at_round = BigInt(await rpc.send('eth_call', [calldata2, block_num]))
+    round.winner = items[winner_index].owner
+    round.winner_shares = winner_shares_at_round
+    // console.log(`winner: ${winner_index}`)
+    rounds[roundId] = round
+}
+
+let event_callbacks = {
+    '0x0c4b0e8211ec0b63fc72dc635e0d45b5e1f32b00b0c8729f668b4522b40192f3': onEvent_StakeUpdate,
+    '0xe1b04305f844c23d1b26e3ecb14a18a0a1fe3e3cb103cc9827ab4f2913e2b38e': onEvent_RewardClaimed,
+    '0x80dc255f03a584a015e4491ae09e79523771800437d7ae6f0092722684492b38': onEvent_RoundEnded
+}
+
+async function processLog(log) {
+    let callback = event_callbacks[log.topics[0]]
+    if (callback) {
+        return callback(log)
+    } else {
+        console.warn('unprocessed event:', log.topics[0])
+    }
+}
+
+const DEPLOY_BLOCK = 17280000
+const QUERY_MAX_BLOCKS = 10000
+async function loadLogs() {
+    let start = DEPLOY_BLOCK
+    let end = await rpc.getBlockNumber()
+    while (start < end) {
+        query = {
+            address: conf.lottoyield.address,
+            fromBlock: start,
+            toBlock: end
+        }
+        let logs = await rpc.getLogs(query)
+        await Promise.all(logs.map(processLog))
+        start += QUERY_MAX_BLOCKS
+    }
+}
+
+async function getTotalStakes() {
+    let root_hash = await lottoyield.$rootHash()
+    let total_stakes = BigInt(root_hash) & ((1n << 128n) - 1n)
+    return total_stakes
 }
 
 async function loadStakesFromStorage() {
@@ -228,15 +349,19 @@ async function loadStakesFromStorage() {
         return
     }
 
-    let rootHash = await lottoyield.$rootHash()
-    let totalStakes = BigInt(rootHash) & ((1n << 128n) - 1n)
     items = Array.from(await lottoyield.getStakes(count, 0)).map(({owner, balance, shares}) => {return {owner, balance, shares}})
-    uiTableStakers(totalStakes)
+    
+    let total_stakes = await getTotalStakes()
+    uiTableStakers(total_stakes)
 }
 
 async function updateRewardPool() {
-    let tvl = await steth.balanceOf(conf.lottoyield.address)
-    el_tvl.innerText = '$' + f2(eth2usd(tvl))
+    try {
+        let tvl = await steth.balanceOf(conf.lottoyield.address)
+        el_tvl.innerText = '$' + f2(eth2usd(tvl))
+    } catch (err) {
+        console.error('update reward failed:', err)
+    }
 }
 
 async function sendDeposit(eth) {
@@ -284,7 +409,13 @@ async function walletHardConnect() {
 async function onLoad() {
     walletSoftConnect()
 
-    loadStakesFromStorage()
+    // loadStakesFromStorage()
+    
+    loadLogs().then(() => {
+        getTotalStakes().then(uiTableStakers)
+        uiTableHistory()
+    })
+
     // updateRewardPool()
 }
 
@@ -325,7 +456,9 @@ async function testEndRound() {
     root_hash = root_hash.toString(16)
     random = random.toString(16)
     setDemoText(`root: ${root_hash.substr(0,3)}..${root_hash.substr(-3)} random: ${random.substr(0,3)}..${random.substr(-3)} reward: ${un18f2(reward)}`)
-    
+
+    await processLog(receipt.logs[0])
+    uiTableHistory()
 }
 
 async function getWinnerIndex(round_id) {
@@ -349,8 +482,12 @@ async function testClaimWin() {
         return
     }
     let round_id = count - 1
-    let idx = getDemoIndex()
-    let winner_idx = await getWinnerIndex(round_id)
+    let idx = parseInt(getDemoIndex())
+    let winner_idx = -1
+    try {
+        winner_idx = parseInt(await getWinnerIndex(round_id))
+    } catch (err) {
+    }
     if (idx != winner_idx) {
         setDemoText(`not winner (psst... winner is #${winner_idx})`)
         return
@@ -364,6 +501,11 @@ async function testClaimWin() {
         let receipt = await rpc.waitForTransaction(res.hash)
         setManaText(receipt)
         setDemoText('reward claimed (0 schmekels for demo)')
+
+        playConfetti()
+
+        await processLog(receipt.logs[0])
+        uiTableHistory()
     } catch (err) {
         if (err.reason == 'invalid claim proof') {
             testEndRound()
