@@ -188,7 +188,7 @@
           ]
     },
     "lottoyield": {
-        "address": "0xc981ec845488b8479539e6b22dc808fb824db00a",
+        "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
         "abi": [{
             "inputs": [
             {

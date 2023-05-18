@@ -32,6 +32,14 @@ function playConfetti() {
     })
 }
 
+let reward_pool = 420.69
+const reward_rate = 0.016
+function uiRewardPool() {
+    reward_pool += reward_rate
+    el_rewards.innerText = f2(reward_pool)
+}
+setInterval(uiRewardPool, 1000)
+
 let browser_provider = new ethers.BrowserProvider(window.ethereum)
 
 const rpc_url = (window.location.hostname != '127.0.0.1' ? 'https://anvil-fork-production.up.railway.app/' : 'http://127.0.0.1:8545/')
@@ -316,7 +324,7 @@ async function processLog(log) {
     }
 }
 
-const DEPLOY_BLOCK = 17280000
+const DEPLOY_BLOCK = 0 //17280000
 const QUERY_MAX_BLOCKS = 10000
 async function loadLogs() {
     let start = DEPLOY_BLOCK
@@ -328,7 +336,8 @@ async function loadLogs() {
             toBlock: end
         }
         let logs = await rpc.getLogs(query)
-        await Promise.all(logs.map(processLog))
+        let promises = logs.map(processLog)
+        await Promise.all(promises)
         start += QUERY_MAX_BLOCKS
     }
 }
@@ -373,7 +382,7 @@ async function sendDeposit(eth) {
         
         // TODO: remove, this is DEMO ONLY
         index = parseInt(index) % (1 << TREE_HEIGHT)
-        use_wallet = false // true
+        use_wallet = true
 
         await updateItem(index, eth, use_wallet)
     } catch (err) {
