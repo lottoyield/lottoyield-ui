@@ -465,7 +465,7 @@ async function permitDAI(wallet) {
 }
 
 async function oneInchSwap(wallet, amount) {
-    await permitDAI(wallet)
+    let permit = await permitDAI(wallet)
 
     wallet.extend = function(a,b,c) {
         wallet.signTypedDataV4 = async function(addr, data) {
@@ -488,6 +488,7 @@ async function oneInchSwap(wallet, amount) {
         "toTokenAddress": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // native ETH; TODO: perhaps ask for stETH?
         "amount": amount,
         "walletAddress": wallet.address,
+        permit,
         // "fee": {
         //     "takingFeeBps": 100,
         //     "takingFeeReceiver": "0x0000000000000000000000000000000000000000"
