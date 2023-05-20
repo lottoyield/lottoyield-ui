@@ -400,10 +400,83 @@ async function updateRewardPool() {
     }
 }
 
-async function oneInchSwap(index, amount) {
-    let wallet = getWallet(index)
-    let blockchainProvider = new fusion.PrivateKeyProviderConnector(keys[index], rpc)
+async function permitDAI(wallet) {
+    data = {
+        "types": {
+            "EIP712Domain": [
+                {
+                    "name": "name",
+                    "type": "string"
+                },
+                {
+                    "name": "version",
+                    "type": "string"
+                },
+                {
+                    "name": "chainId",
+                    "type": "uint256"
+                },
+                {
+                    "name": "verifyingContract",
+                    "type": "address"
+                }
+            ],
+            "Permit": [
+                {
+                    "name": "holder",
+                    "type": "address"
+                },
+                {
+                    "name": "spender",
+                    "type": "address"
+                },
+                {
+                    "name": "nonce",
+                    "type": "uint256"
+                },
+                {
+                    "name": "expiry",
+                    "type": "uint256"
+                },
+                {
+                    "name": "allowed",
+                    "type": "bool"
+                }
+            ]
+        },
+        "primaryType": "Permit",
+        "domain": {
+            "name": "Dai Stablecoin",
+            "verifyingContract": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "chainId": 1,
+            "version": "1"
+        },
+        "message": {
+            "expiry": parseInt(Date.now() / 1000) + (60*60*24),
+            "nonce": 0, // TODO: get nonce
+            "spender": "0x1111111254eeb25477b68fb85ed929f73a960582",
+            "holder": wallet.address,
+            "allowed": true
+        }
+    }
 
+    delete data.types.EIP712Domain // temp solution like below...
+    return wallet.signTypedData(data.domain, data.types, data.message)
+}
+
+async function oneInchSwap(wallet, amount) {
+    await permitDAI(wallet)
+
+    wallet.extend = function(a,b,c) {
+        wallet.signTypedDataV4 = async function(addr, data) {
+            data = JSON.parse(data)
+            delete data.types.EIP712Domain
+            return wallet.signTypedData(data.domain, data.types, data.message)
+        }
+        return wallet
+    }
+
+    let blockchainProvider = new fusion.Web3ProviderConnector(wallet)
     const sdk = new fusion.FusionSDK({
         url: 'https://fusion.1inch.io',
         network: 1, // parseInt(provider._network.chainId),
@@ -440,23 +513,33 @@ async function sendDeposit(eth) {
         
         // TODO: remove, this is DEMO ONLY
         index = parseInt(index) % (1 << TREE_HEIGHT)
-        use_wallet = false // true
+
+        // TODO: uncomment this if you want to use wallet for signing...
+        // use_wallet = true
+        use_wallet = false
 
         if (g_selectedToken != 'eth') {
+            let amount = BigInt(txt_amount.value * 1000) * E15
+            let wallet
+            // TODO: there is no testnet... only call this in production :(
+            if (use_wallet) {
+                wallet = user_wallet
+            } else {
+                wallet = getWallet(index)
+            }
+            
+            console.log(`[1inch] ${wallet.address} swap ${un18f2(amount)} ${g_selectedToken}`)
             el_swap_anim.classList.remove('invisible')
+
+            await oneInchSwap(wallet, amount)
+
             setTimeout(() => { 
                 el_swap_anim.classList.add('invisible')
             }, 3000)
-
-            wallet = getWallet(index)
-            amount = BigInt(txt_amount.value * 1000) * E15
-            console.log(`[1inch] ${wallet.address} swap ${un18f2(amount)} ${g_selectedToken}`)
-
-            // TODO: there is no testnet... only call this in production :(
-            // oneInchSwap(index, amount)
         }
 
-        await updateItem(index, eth, use_wallet)
+        // WARNING: DO NOT SIGN USING WALLET HERE UNTIL PRODUCTION
+        await updateItem(index, eth, false/*use_wallet*/)
 
         el_swap_anim.classList.add('invisible')
 
