@@ -44,8 +44,10 @@ input[type="button"]:active {
 
 input[type="text"] {
     border-radius: 5px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-right: 5px;
+    margin-left: 5px;
 }
 
 .hidden {
@@ -104,4 +106,10 @@ td {
     60% { opacity: 1; }
     80% { opacity: 1.2; }
     100% { opacity: 1; }
+}
+
+.flexc {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

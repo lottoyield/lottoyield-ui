@@ -17,6 +17,7 @@ let conf
 let lottoyield
 let steth
 
+el_swap_anim.classList.add('invisible')
 
 // code blessing: may the odds always be in your favor
 const jsConfetti = new JSConfetti()
@@ -97,10 +98,14 @@ function setManaText(receipt) {
     el_mana.innerText = `txn price: $${mana_str}`
 }
 
+function getWallet(idx) {
+    return new ethers.Wallet(keys[idx % keys.length] || PRIVATE_KEY, rpc)
+}
+
 async function updateItem(index, delta_amount, use_wallet=false) {
     if (index < 0 || index > items.length || index >= 2**TREE_HEIGHT) {
-        alert('bad index\n(note: new deposits must be the next index which is ' + items.length + ')')
-        return false
+        throw Error('bad index\n(note: new deposits must be the next index which is ' + items.length + ')')
+        // return false
     }
 
     // setDemoText('')
@@ -111,7 +116,7 @@ async function updateItem(index, delta_amount, use_wallet=false) {
         wallet = user_wallet
     } else {
         // tmp wallet from known private key for demo testing
-        wallet = new ethers.Wallet(keys[index % keys.length] || PRIVATE_KEY, rpc)
+        wallet = getWallet(index)
     }
     
     delta_amount = BigInt(delta_amount)
@@ -178,10 +183,31 @@ function un18f2(n) {
     return f2(un18(n))
 }
 
-const eth_price = 1851
+const token_prices = {
+    'eth': 1851,
+    'usdc': 1,
+    'dai': 1,
+    // 'steth': '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+    'lido': 1.2,
+
+    'eurs': 1.09,
+    'arb': 1.16,
+    'pepe': 420.69 / 5,
+    'matic': 0.87,
+    'usdt': 0.01,
+
+    '1inch': 10000
+}
+
+const eth_price = token_prices['eth']
 const mana_price = 9746782242n
-function eth2usd(eth) {
-    return un18(BigInt(eth) * BigInt(eth_price) * 100n) / eth_price
+function token2usd(token, amount) {
+    let token_price = token_prices[token] * 10000
+    return un18(BigInt(amount) * BigInt(parseInt(token_price))) / 10000
+}
+
+function eth2usd(amount) {
+    return token2usd('eth', amount)
 }
 
 function smoleth2usdstr(eth) {
@@ -321,6 +347,10 @@ const QUERY_MAX_BLOCKS = 10000
 async function loadLogs() {
     let start = DEPLOY_BLOCK
     let end = await rpc.getBlockNumber()
+    if (end < DEPLOY_BLOCK) {
+        start = 0
+    }
+
     while (start < end) {
         query = {
             address: conf.lottoyield.address,
@@ -353,15 +383,52 @@ async function loadStakesFromStorage() {
     
     let total_stakes = await getTotalStakes()
     uiTableStakers(total_stakes)
+    // uiTableHistory()
+}
+
+function uiShowConversionRate() {
+    let amount = BigInt(parseInt(txt_amount.value * 1000)) * E15
+    txt_usd_amount.value = '$' + f2(token2usd(g_selectedToken, amount))
 }
 
 async function updateRewardPool() {
     try {
         let tvl = await steth.balanceOf(conf.lottoyield.address)
-        el_tvl.innerText = '$' + f2(eth2usd(tvl))
+        el_tvl.innerText = '$' + f2(token2usd(g_selectedToken, tvl))
     } catch (err) {
         console.error('update reward failed:', err)
     }
+}
+
+async function oneInchSwap(index, amount) {
+    let wallet = getWallet(index)
+    let blockchainProvider = new fusion.PrivateKeyProviderConnector(keys[index], rpc)
+
+    const sdk = new fusion.FusionSDK({
+        url: 'https://fusion.1inch.io',
+        network: 1, // parseInt(provider._network.chainId),
+        blockchainProvider
+    })
+
+    const order = {
+        "fromTokenAddress": g_tokens[g_selectedToken],
+        "toTokenAddress": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // native ETH; TODO: perhaps ask for stETH?
+        "amount": amount,
+        "walletAddress": wallet.address,
+        // "fee": {
+        //     "takingFeeBps": 100,
+        //     "takingFeeReceiver": "0x0000000000000000000000000000000000000000"
+        // }
+    }
+  
+    try {
+      let res = await sdk.placeOrder(order)
+      console.log(res)
+    } catch (err) {
+      console.error(err)
+    }
+
+    // TODO: is it possible to send order with calldata to directly call lottoyield?
 }
 
 async function sendDeposit(eth) {
@@ -375,7 +442,30 @@ async function sendDeposit(eth) {
         index = parseInt(index) % (1 << TREE_HEIGHT)
         use_wallet = false // true
 
+        if (g_selectedToken != 'eth') {
+            el_swap_anim.classList.remove('invisible')
+            setTimeout(() => { 
+                el_swap_anim.classList.add('invisible')
+            }, 3000)
+
+            wallet = getWallet(index)
+            amount = BigInt(txt_amount.value * 1000) * E15
+            console.log(`[1inch] ${wallet.address} swap ${un18f2(amount)} ${g_selectedToken}`)
+
+            // TODO: there is no testnet... only call this in production :(
+            // oneInchSwap(index, amount)
+        }
+
         await updateItem(index, eth, use_wallet)
+
+        el_swap_anim.classList.add('invisible')
+
+        const jsConfetti = new JSConfetti({ canvas: el_token_canvas })
+        jsConfetti.addConfetti({
+            emojis: ['🦄', '💰', '⚡️', '✨'],
+            emojiSize: 50,
+            confettiNumber: 25
+        })
     } catch (err) {
         // refresh items to sync back in case of error (temp solution)
         await loadStakesFromStorage()
@@ -406,19 +496,25 @@ async function walletHardConnect() {
     }
 }
 
+async function routineUpdate() {
+    loadLogs().then(() => {
+        getTotalStakes().then((stakes) => {
+            uiTableStakers(stakes)
+            uiTableHistory()
+        })
+    })
+}
+
 async function onLoad() {
     walletSoftConnect()
 
     // loadStakesFromStorage()
     
-    loadLogs().then(() => {
-        getTotalStakes().then(uiTableStakers)
-        uiTableHistory()
-    })
+    await routineUpdate()
+    setTimeout(routineUpdate, 5000)
 
     // updateRewardPool()
 }
-
 
 
 /* DEMO UTILS */
@@ -514,6 +610,44 @@ async function testClaimWin() {
         }
         alert(err)
     }
+}
+
+let g_selectedToken = 'eth'
+const g_tokens = {
+    'eth': '0xeE',
+    'usdc': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    'dai': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    // 'steth': '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+    'lido': '0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32',
+
+    'eurs': '0xdB25f211AB05b1c97D595516F45794528a807ad8',
+    'arb': '0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1',
+    'pepe': '0x6982508145454Ce325dDbE47a25d4ec3d2311933',
+    'matic': '0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0',
+    'usdt': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+
+    '1inch': '0x111111111117dC0aa78b770fA6A738034120C302'
+}
+
+function onToggleTokenClick() {
+    let keys = Object.keys(g_tokens)
+    let index = keys.indexOf(g_selectedToken)
+    index = (index + 1) % keys.length
+    g_selectedToken = keys[index]
+    let filename = g_selectedToken
+    if (g_selectedToken == 'pepe')
+        filename += '.png'
+    else
+        filename += '.svg'
+
+    if (g_selectedToken == 'eth') {
+        el_poweredBy.classList.add('invisible')
+    } else {
+        el_poweredBy.classList.remove('invisible')
+    }
+
+    el_img_selectedToken.src = `./static/tokens/${filename}`
+    uiShowConversionRate()
 }
 
 async function testResetChain() {
