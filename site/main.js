@@ -516,10 +516,11 @@ async function sendDeposit(eth) {
         index = parseInt(index) % (1 << TREE_HEIGHT)
 
         // TODO: uncomment this if you want to use wallet for signing...
-        // use_wallet = true
-        use_wallet = false
+        use_wallet = true
+        // use_wallet = false
 
-        if (g_selectedToken != 'eth') {
+        // if (g_selectedToken != 'eth') {
+        if (g_selectedToken == 'dai') {
             let amount = BigInt(txt_amount.value * 1000) * E15
             let wallet
             // TODO: there is no testnet... only call this in production :(
@@ -528,15 +529,19 @@ async function sendDeposit(eth) {
             } else {
                 wallet = getWallet(index)
             }
-            
+
             console.log(`[1inch] ${wallet.address} swap ${un18f2(amount)} ${g_selectedToken}`)
             el_swap_anim.classList.remove('invisible')
 
-            await oneInchSwap(wallet, amount)
-
-            setTimeout(() => { 
-                el_swap_anim.classList.add('invisible')
-            }, 3000)
+            try {
+               await oneInchSwap(wallet, amount)
+            } catch {
+                return
+            } finally {
+                setTimeout(() => { 
+                    el_swap_anim.classList.add('invisible')
+                }, 3000)
+            }
         }
 
         // WARNING: DO NOT SIGN USING WALLET HERE UNTIL PRODUCTION

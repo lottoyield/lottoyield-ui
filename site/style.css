@@ -16,6 +16,14 @@ h1 {
     color: dodgerblue;
 }
 
+img {
+    transition: scale 0.15s ease-out;
+}
+
+img:active {
+    scale: 2;
+}
+
 .widget {
     width: 380px;
     border-radius: 15px;
