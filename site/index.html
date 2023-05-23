@@ -27,12 +27,19 @@
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" integrity="sha512-FDcVY+g7vc5CXANbrTSg1K5qLyriCsGDYCE02Li1tXEYdNQPvLPHNE+rT2Mjei8N7fZbe0WLhw27j2SrGRpdMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.3.0/ethers.umd.min.js" integrity="sha512-2T4o6X9D1OQ1ZhA48zBlsDV0rUVZD7ddrHpS/a8k0FDSRCbjV4n1LJUQN3BeIawFyWazgGwcjVn1QU5YkaXuqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+  <!-- browserify fusion-sdk -p esmify -o fusion.js --standalone fusion -->
+  <script src="./static/fusion.js"></script>
 
   <script src="./merkle.js"></script>
 </head>
 <body>
 
 <main>
+    <div id="el_swap_anim" style="position: fixed; justify-content: center; pointer-events: none;">
+        <img src="./static/1inch_anim.gif" width="360" height="360" />
+        <h1 style="position: absolute; z-index: 99; top: 0px">Swapping...</h1>
+    </div>
+
     <div style="display: flex">
         <img src="./static/lottoyield-400x400.png" width="64" />
         <h1>Lottoyield</h1>
@@ -53,19 +60,26 @@
 
     <!-- potentially connect those two widget divs -->
     <div class="widget">
+        <canvas id="el_token_canvas" style="position: absolute; pointer-events: none; width: 380px; height: 200px"></canvas>
+    
         <input type="button" id="btn_connect" value="Connect" style="width: 100%; margin: auto" onclick="walletHardConnect()" />
         <small class="hidden">
             balance: 6.9 ETH
         </small>
-
         <hr />
-        
-        <input type="text" id="txt_usd_amount" value="$9,255" style="width: 160px; text-align: right; background-color: coral; border: 0px;" disabled />
-        <br />
-
-        <span>ETH amount:</span>
-        <input type="text" id="txt_amount" value="5" maxlength="5" style="width: 120px; text-align: right" oninput="txt_usd_amount.value = smoleth2usdstr(this.value)" />
-        <input type="button" value="Send" onclick="sendDeposit(BigInt(parseFloat(txt_amount.value) * 1000) * E15)" />
+        <div class="flexc">
+            <input type="text" id="txt_usd_amount" value="$9255.00" style="width: 130px; text-align: right; background-color: coral; border: 0px;" disabled />
+            <img src="./static/ben.png" width="24" height="24" />
+        </div>
+        <div class="flexc">
+            <span style="margin: 5px">amount</span>
+            <input type="text" id="txt_amount" value="5" maxlength="5" style="width: 120px; text-align: right" oninput="uiShowConversionRate()" />
+            <img src="./static/tokens/eth.svg" width="24" height="24" id="el_img_selectedToken" onclick="onToggleTokenClick()" />
+            <input type="button" value="Send" onclick="sendDeposit(BigInt(parseFloat(txt_amount.value) * 1000) * E15)" />
+        </div>
+        <div class="flexc invisible" id="el_poweredBy">
+            swap is powered <img src="./static/tokens/1inch.svg" width="20" height="20" style="margin-left: 10px; margin-right: 10px;" /><b>1inch Fusion™</b>
+        </div>
         <br />
         <small>
             no lockup period - funds fully liquid!
